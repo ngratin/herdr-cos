@@ -15,6 +15,8 @@ A Chief of Staff for Claude Code on Herdr: one agent you talk to, delegating wor
 - **CoS (Chief of Staff)**: the only agent you talk to. It turns your requests into written briefs, hands them to Staffers, checks their reports, and keeps a ledger of topics, status, and decisions. It does not do the work itself.
 - **Staffer**: a Claude Code session in its own Herdr terminal, assigned one topic. It works from the brief, writes a report file, and notifies the CoS.
 
+You only talk to the CoS. It starts, checks on, and cleans up Staffers by itself.
+
 Everything is plain files under `workspace/`:
 
 ```
@@ -35,17 +37,14 @@ There is no code beyond a setup script. The behavior is defined by prompts: [`CL
 | Where workers run | Inside one Claude Code session | Separate Herdr terminals |
 | If the lead restarts | Workers end with the session | Staffers keep working and report to the new CoS |
 | State | Conversation context | Files you can read, edit, and keep |
-| Visibility | Through the lead's session | Each Staffer is a terminal you can attach to, watch, and step into |
+| Visibility | Through the lead's session | Each Staffer has its own terminal you can open and watch |
 
 The trade-off: every request goes through a written brief, and each Staffer is a full Claude Code session, so it costs more and is heavier for small tasks. It fits work that runs for hours or days, gets paused and resumed, or needs a record.
 
 ## Requirements
 
 - [Claude Code](https://code.claude.com/docs/en/overview)
-- [Herdr](https://herdr.dev/) (`hc`). Written against hc 0.1.21.
-- Herdr notes enabled (the default). If `notes = false` is set in `~/.config/herdr-core/config.toml`, Staffer reports won't reach the CoS.
-
-Staffers start with `claude --permission-mode auto`. See [`templates/staffer.md`](templates/staffer.md) to change this.
+- [Herdr](https://herdr.dev/). Written against hc 0.1.21.
 
 ## Getting started
 
@@ -56,13 +55,13 @@ Staffers start with `claude --permission-mode auto`. See [`templates/staffer.md`
    cd herdr-cos
    ```
 
-2. Install the Staffer template and create the workspace:
+2. Run the setup script once:
 
    ```sh
    ./scripts/setup.sh
    ```
 
-   The CoS starts Staffers with `hc run staffer`, and Herdr only looks for templates in `~/.config/herdr-core/templates`. This script writes `staffer.md` there with the absolute path of this copy's `workspace/` filled in, so Staffers know where to report. It also creates `workspace/ledger.md`. Run it once, and again after editing `templates/staffer.md` or moving this directory.
+   It registers the Staffer template with Herdr, so the CoS can start Staffers and they know where to report.
 
 3. Start Claude Code in this directory, from a Herdr terminal:
 
@@ -70,26 +69,24 @@ Staffers start with `claude --permission-mode auto`. See [`templates/staffer.md`
    claude
    ```
 
-   That's it. The `CLAUDE.md` here makes it the CoS. It must run inside a Herdr terminal: outside one, `$HC_TERMINAL_ID` is empty and the CoS can't reach Staffers.
-
 4. Talk to it. For example: "Find out why the nightly import job is slow in ~/src/app and propose a fix."
 
-## Day-to-day
+That's it. From here on, you just talk to the CoS: ask it "what's in progress?", give it new work, and answer when it needs your decision. It only asks about direction, priorities, hard-to-reverse operations, and anything sent or published externally.
 
-- **Status**: ask the CoS "what's in progress?", or read `workspace/ledger.md`.
-- **Restarting the CoS**: just run `claude` here again. On start it records its new address, reads the ledger, checks every Staffer with `hc`, and picks up reports that arrived while it was away. Staffers are started with `--outlive-parent`, so they keep working.
-- **Watching a Staffer**: `hc ls`, then `hc attach <name>` (`ctrl+\` detaches).
-- **Decisions**: the CoS only asks you about direction, priorities, hard-to-reverse operations, and anything sent or published externally. Everything else it decides and reports.
+If you close the CoS, just run `claude` here again. Staffers keep working while it's gone, and it picks up where it left off.
 
 ## Customizing
 
 - **CoS behavior**: edit [`CLAUDE.md`](CLAUDE.md). For example, the limits on Staffers (5 working, 20 total), the brief format, or when a reviewer Staffer is used.
-- **Staffer behavior**: edit [`templates/staffer.md`](templates/staffer.md), then run `./scripts/setup.sh` again. The installed copy is what Herdr uses.
+- **Staffer behavior**: edit [`templates/staffer.md`](templates/staffer.md), then run `./scripts/setup.sh` again.
 - **Keep `workspace/` out of git.** It is ignored by default and will contain details of your work.
 
 ## Notes
 
-- The Staffer template is installed under a single name, `staffer`. If you keep more than one copy of this repository on a machine, the last `setup.sh` run wins, and Staffers report to that copy's workspace.
+- Staffers run Claude Code in auto mode (`--permission-mode auto`), so they work without asking for every permission. You can change this in [`templates/staffer.md`](templates/staffer.md).
+- Run `./scripts/setup.sh` again if you move this directory.
+- Use one copy of this repository per machine. The Staffer template is registered under a single name, so the last copy you ran `setup.sh` in is the one Staffers report to.
+- If Staffer reports never reach the CoS, check that `notes = false` is not set in `~/.config/herdr-core/config.toml`.
 - `CLAUDE.md` in this directory turns any Claude Code session started here into the CoS. To edit this repository with Claude Code as a normal assistant, start Claude Code in another directory and point it at the files here.
 
 ## License
